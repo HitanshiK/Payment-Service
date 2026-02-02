@@ -21,21 +21,12 @@ public class ProjectApplication {
 
 //create project structure
 
-// start with entity models
-//user
-//payments
-// ledgers
-// fx rate
-//wallet
-//idempotency key
-//external bank payment
 
 
 //├── config          → Security, Redis, DB configs
 //├── controller      → REST APIs
 //├── service         → Business logic
 //├── repository      → JPA repositories
-//├── entity          → DB entities   //models
 //├── dto             → Request/Response objects
 //├── ledger          → Ledger engine logic
 //├── payment         → Payment processing logic

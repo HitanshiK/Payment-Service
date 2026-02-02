@@ -6,6 +6,9 @@ public enum Status {
     INACTIVE,
     FROZEN,
     BLOCKED,
-    PENDING
+
+
+    PENDING,
+    FAILED
     ;
 }

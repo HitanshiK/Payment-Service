@@ -12,7 +12,7 @@ import java.sql.Timestamp;
 @Entity
 @NoArgsConstructor
 @Table(name = "outbox_events")
-public class events {
+public class Events {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
