@@ -1,6 +1,5 @@
 package com.paymentSystem.project.entity;
 
-import com.paymentSystem.project.enums.Currency;
 import com.paymentSystem.project.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -24,9 +23,13 @@ public class IdempotencyRecord {
     private String idempotencyKey;
 
     @Enumerated(EnumType.STRING)
-    private PaymentStatus status = PaymentStatus.INITIATED;
+    private PaymentStatus status = PaymentStatus.ONGOING;
 
-    private String failureReason ;
+    @OneToOne
+    @JoinColumn(name = "paymentId")
+    Payments payments;
+
+    private String response; //response to the api
 
     @CreationTimestamp
     private Timestamp createdAt ;

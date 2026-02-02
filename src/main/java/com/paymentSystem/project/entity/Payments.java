@@ -22,6 +22,11 @@ public class Payments {
     @Column(name = "idempotency_key", unique = true, nullable = false)
     private String idempotencyKey;
 
+    @Column(name = "ref_id", unique = true, nullable = false)
+    private String refId;
+
+    private Long originalPaymentId;
+
     @Enumerated(EnumType.STRING)
     private Currency currency = Currency.INR;
 
