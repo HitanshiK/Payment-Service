@@ -19,8 +19,7 @@ public class ProjectApplication {
 
 }
 
-//create project structure
-
+//start with auth service
 
 
 //├── config          → Security, Redis, DB configs
@@ -33,6 +32,5 @@ public class ProjectApplication {
 //├── wallet          → Wallet logic
 //├── auth            → JWT + PIN logic
 //├── events          → Event classes + listeners
-//├── exception       → Custom exceptions
 //└── util            → Helpers (Idempotency, etc.)
 
