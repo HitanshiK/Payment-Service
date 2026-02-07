@@ -36,10 +36,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-    //encoding strengths can be set differently for login password and pin
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 }

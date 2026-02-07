@@ -27,7 +27,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request){
-
+        System.out.println("login user api");
         String token = authService.login(request);
 
         return ResponseEntity.ok(Map.of("token",token,"tokenType","Bearer"));
@@ -35,11 +35,13 @@ public class AuthController {
 
     @PostMapping("/addUser")
     public AddUserResponse addUser(@RequestBody AddUserRequest request){
+        System.out.println("in add user api");
         return userService.addUser(request);
     }
 
     @PostMapping("/logout")
     public void logout(String token) {
+        System.out.println("in logout user api");
         authService.logout(token);
         SecurityContextHolder.clearContext();
     }

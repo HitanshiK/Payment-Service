@@ -28,7 +28,7 @@ public class AuthService {
     }
     public String login (LoginRequest request){
 
-        User user = userRepository.findByEmailOrPhone(request.getPhoneOrEmail(), request.getPhoneOrEmail())
+        User user = userRepository.findByEmailOrMobile(request.getPhoneOrEmail(), request.getPhoneOrEmail())
                 .orElseThrow(()->new RuntimeException("User not found"));
 
         if(!pinService.match(request.getPin(), user.getPassword())){

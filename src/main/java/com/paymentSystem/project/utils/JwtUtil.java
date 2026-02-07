@@ -24,7 +24,7 @@ import static java.security.KeyRep.Type.SECRET;
 @Component
 public class JwtUtil {
 
-    private final String SECRET = "################";
+    private final String SECRET = "my-super-secure-jwt-secret-key-2026!!!";
     private final SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));//to be changes in production
     private final long EXPIRATION = 1000 * 60 * 15; // 15 minutes
 

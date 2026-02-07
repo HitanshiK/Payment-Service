@@ -17,6 +17,10 @@ public class PinService {
     }
 
     public String hashPassword (String rawPin){
+        return passwordEncoder.encode(rawPin);
+    }
+
+    public String hashPin (String rawPin){
         validatePin(rawPin);
         return passwordEncoder.encode(rawPin);
     }

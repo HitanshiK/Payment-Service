@@ -7,6 +7,7 @@ import com.paymentSystem.project.exceptions.GlobalExceptionHandler;
 import com.paymentSystem.project.repos.UserRepository;
 import com.paymentSystem.project.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -34,14 +35,14 @@ public class UserService {
 
     public AddUserResponse addUser (AddUserRequest request){
         if(userRepository.existsByEmailOrMobile(request.getEmail(), request.getMobile())){
-             globalExceptionHandler.handleUserRegisteredException();
+            throw new RuntimeException("USER ALREADY PRESENT WITH THIS EMAIL OR MOBILE");
         }else{
             User user = new User();
             user.setName(request.getName());
             user.setEmail(request.getEmail());
             user.setMobile(request.getMobile());
             user.setPassword(pinService.hashPassword(request.getLoginPassword()));
-            user.setPin(pinService.hashPassword(request.getPin()));
+            user.setPin(pinService.hashPin(request.getPin()));
 
             userRepository.save(user);
 
@@ -53,6 +54,5 @@ public class UserService {
 
             return  response;
         }
-        return new AddUserResponse();
     }
 }

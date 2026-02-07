@@ -1,0 +1,12 @@
+package com.paymentSystem.project.controllers;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/auth")
+public class UserController {
+    //security compliance setting user inactive
+    // profile api's
+    // update user
+}
