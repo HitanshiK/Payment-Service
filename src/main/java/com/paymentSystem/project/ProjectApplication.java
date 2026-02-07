@@ -19,18 +19,5 @@ public class ProjectApplication {
 
 }
 
-//start with auth service
-
-
-//├── config          → Security, Redis, DB configs
-//├── controller      → REST APIs
-//├── service         → Business logic
-//├── repository      → JPA repositories
-//├── dto             → Request/Response objects
-//├── ledger          → Ledger engine logic
-//├── payment         → Payment processing logic
-//├── wallet          → Wallet logic
-//├── auth            → JWT + PIN logic
-//├── events          → Event classes + listeners
-//└── util            → Helpers (Idempotency, etc.)
+//reset pin logic
 

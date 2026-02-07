@@ -1,6 +1,7 @@
 package com.paymentSystem.project.middlewares;
 
 import com.paymentSystem.project.entity.User;
+import com.paymentSystem.project.enums.Status;
 import com.paymentSystem.project.repos.UserRepository;
 import com.paymentSystem.project.utils.JwtUtil;
 import jakarta.servlet.FilterChain;
@@ -8,6 +9,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -28,6 +31,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userRepository = userRepository;
     }
 
+    @Autowired
+    RedisTemplate<String, Object> redisTemplate;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -39,10 +45,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
 
             try {
+                String jti = jwtUtil.extractJti(token);
+                if (redisTemplate.hasKey("blacklist:" + jti)) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has been logged out");
+                    return;
+                }
+
                 Long userId = jwtUtil.extractUserId(token);
                 User user = userRepository.findById(userId).orElse(null);
 
+
                 if (user != null) {
+                    if (!user.getStatus().equals(Status.INACTIVE)) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "User account is inactive");
+                        return;
+                    }
+
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(
                                     user.getId(),

@@ -11,6 +11,7 @@ import com.paymentSystem.project.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+
 @Service
 public class AuthService {
     UserRepository userRepository;
@@ -25,7 +26,7 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
         this.pinService = pinService;
     }
-    String login (LoginRequest request){
+    public String login (LoginRequest request){
 
         User user = userRepository.findByEmailOrPhone(request.getPhoneOrEmail(), request.getPhoneOrEmail())
                 .orElseThrow(()->new RuntimeException("User not found"));
@@ -42,4 +43,9 @@ public class AuthService {
 
         return jwtUtil.generateToken(user.getId());
     }
+
+    public void logout (String token){
+        jwtUtil.logout(token);
+    }
+
 }

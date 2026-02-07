@@ -29,7 +29,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/health").permitAll()
-                .requestMatchers("/api/auth/**").permitAll() // login/register endpoints
+                .requestMatchers("/auth/**").permitAll() // login/register endpoints
                 .anyRequest().authenticated() // everything else requires auth
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -37,6 +37,7 @@ public class SecurityConfig {
         return http.build();
     }
 
+    //encoding strengths can be set differently for login password and pin
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

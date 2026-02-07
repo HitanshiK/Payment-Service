@@ -31,6 +31,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUserRegisteredException() {
+        ApiError error = new ApiError(
+                "USER_ALREADY_PRESENT",
+                "User Already Present with this email or phone",
+                400
+        );
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGenericException(Exception ex) {
         // Log full error internally
         ex.printStackTrace();
