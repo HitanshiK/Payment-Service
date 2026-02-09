@@ -13,5 +13,5 @@ import java.util.List;
 @Repository
 public interface WalletRepository extends JpaRepository<Wallet, Long> {
 
-    List<Wallet> findByUser (Long user);
+    List<Wallet> findByUser_Id (Long user);
 }

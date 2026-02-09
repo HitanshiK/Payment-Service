@@ -56,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 
                 if (user != null) {
-                    if (!user.getStatus().equals(Status.INACTIVE)) {
+                    if (!user.getStatus().equals(Status.ACTIVE)) {
                         response.sendError(HttpServletResponse.SC_FORBIDDEN, "User account is inactive");
                         return;
                     }

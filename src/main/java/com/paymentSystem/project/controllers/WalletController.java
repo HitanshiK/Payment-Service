@@ -15,7 +15,7 @@ public class WalletController {
     WalletService walletService;
 
     @PostMapping("/{user}")
-    public AddWalletResponse createWallet(@PathVariable String user, AddWalletRequest request){
+    public AddWalletResponse createWallet(@PathVariable Long user,@RequestBody AddWalletRequest request){
        return walletService.createWallet(user,request);
     }
 
@@ -24,8 +24,9 @@ public class WalletController {
         return walletService.fetchAllWallets(user);
     }
     // fetch wallet balance
-    @GetMapping("/{wallet}/balance")
+    @GetMapping("/{walletId}/balance")
     public double fetchBalance (@PathVariable Long walletId){
+        System.out.println("Calling fetch balance");
         return walletService.fetchWalletBalance(walletId);
     }
 }

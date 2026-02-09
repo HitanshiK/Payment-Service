@@ -28,28 +28,31 @@ public class WalletService {
         this.walletRepository = walletRepository;
     }
 
-    public AddWalletResponse createWallet(String userId, AddWalletRequest request){
-        Long userIdInLong = Long.parseLong(userId);
-        User user = userRepository.findById(userIdInLong)
-                .orElseThrow(()->new RuntimeException("User not found"));
+    public AddWalletResponse createWallet(Long userId, AddWalletRequest request){
+        try{
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if(user.getStatus().equals(Status.INACTIVE)){
-            throw new RuntimeException("USER_INACTIVE");
+            if (user.getStatus().equals(Status.INACTIVE)) {
+                throw new RuntimeException("USER_INACTIVE");
+            }
+
+            Wallet wallet = new Wallet();
+            wallet.setUser(user);
+            wallet.setCurrency(request.getCurrency());
+            wallet.setPerTransLimit(request.getPerTransLimit());
+            wallet.setDefault(request.isDefault());
+            walletRepository.save(wallet);
+
+            AddWalletResponse response = new AddWalletResponse();
+            response.setUserId(wallet.getUser().getId());
+            response.setWalletId(wallet.getId());
+            response.setCurrency(wallet.getCurrency().toString());
+            response.setCreatedAt(wallet.getCreatedAt());
+            return response;
+        }catch (Exception e){
+            throw new RuntimeException(e.getMessage());
         }
-
-        Wallet wallet = new Wallet();
-        wallet.setUser(user);
-        wallet.setCurrency(request.getCurrency());
-        wallet.setPerTransLimit(request.getPerTransLimit());
-        wallet.setDefault(request.isDefault());
-        walletRepository.save(wallet);
-
-        AddWalletResponse response = new AddWalletResponse();
-        response.setUserId(wallet.getUser().getId());
-        response.setWalletId(wallet.getId());
-        response.setCurrency(wallet.getCurrency().toString());
-        response.setCreatedAt(wallet.getCreatedAt());
-        return response;
     }
 
     public com.paymentSystem.project.dto.response.Wallet fetchAllWallets (String userId){
@@ -61,7 +64,7 @@ public class WalletService {
             throw new RuntimeException("USER_INACTIVE");
         }
 
-        List<Wallet> wallets = walletRepository.findByUser(userIdInLong);
+        List<Wallet> wallets = walletRepository.findByUser_Id(userIdInLong);
         com.paymentSystem.project.dto.response.Wallet response = new com.paymentSystem.project.dto.response.Wallet();
         com.paymentSystem.project.dto.response.Wallet.User userDetails = new com.paymentSystem.project.dto.response.Wallet.User();
         userDetails.setId(user.getId());
