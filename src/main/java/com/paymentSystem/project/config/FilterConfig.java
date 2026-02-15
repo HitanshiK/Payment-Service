@@ -6,6 +6,12 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/** Future Scope
+ * Rate Limiting filter -->
+ * no of payment attempts per second
+ * pin guessing
+ */
+
 @Configuration
 public class FilterConfig {
 

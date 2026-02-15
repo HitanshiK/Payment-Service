@@ -27,9 +27,9 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
             String key = request.getHeader(IDEMPOTENCY_HEADER);
 
             if (key == null || key.isBlank()) {
-                response.sendError(HttpStatus.BAD_REQUEST.value(), "Missing Idempotency-Key header");
-                return;
+              throw new RuntimeException("Missing Idempotency-Key header");
             }
+            request.setAttribute("IDEMPOTENCY_KEY", key);
         }
 
         filterChain.doFilter(request, response);

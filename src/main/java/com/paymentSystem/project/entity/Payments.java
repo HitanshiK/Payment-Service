@@ -20,17 +20,20 @@ public class Payments {
     private long id;
 
     @Column(name = "idempotency_key", unique = true, nullable = false)
-    private String idempotencyKey;
+    private String idempotencyKey; //headers
 
     @Column(name = "ref_id", unique = true, nullable = false)
-    private String refId;
+    private String refId;          //unique txn id found in response
 
-    private Long originalPaymentId;
+    private Long originalPaymentId;   // in case of refunds
 
     @Enumerated(EnumType.STRING)
     private Currency currency = Currency.INR;
 
-    private long payeeWalletId; // the one who recieves
+    @Enumerated(EnumType.STRING)
+    private Currency convertedCurrency ;
+
+    private long payeeWalletId; // the one who receives
 
     private long payerWalletId; // the one who pays
 

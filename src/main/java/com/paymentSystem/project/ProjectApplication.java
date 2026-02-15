@@ -21,4 +21,5 @@ public class ProjectApplication {
 
 //reset pin logic
 //create custom Lock repository
-
+// send rs 1 for first time payment                      user experience
+//show amount in words at the time of entering

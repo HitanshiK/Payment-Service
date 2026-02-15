@@ -1,5 +1,6 @@
 package com.paymentSystem.project.entity;
 
+import com.paymentSystem.project.enums.Currency;
 import com.paymentSystem.project.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -17,13 +18,24 @@ public class ExternalPayments {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    private long paymentId;
+    @OneToOne
+    @JoinColumn(name = "paymentId")
+    private Payments payment;
 
-    private String referenceId;
+    private String referenceId; //created internally for mapping;
 
     private PaymentStatus status = PaymentStatus.ONGOING;
 
     private String response;
+
+    @Enumerated(EnumType.STRING)
+    private Currency gatewayCurrency;
+
+    private Double gatewayAmount;
+
+    private String gatewayOrderId ;  //gateway unique id for intent
+
+    private String gatewayReferenceId ; // gateway unique id for money movement
 
     @CreationTimestamp
     private String createdAt;

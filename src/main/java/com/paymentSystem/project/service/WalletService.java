@@ -89,4 +89,16 @@ public class WalletService {
 
         return wallet.getBalance();
     }
+
+    public boolean isWalletLocked (Long payerId){
+        Wallet wallet = walletRepository.findById(payerId)
+                .orElseThrow(()->new RuntimeException("Payee Wallet not Found"));
+
+        if(!wallet.getStatus().equals(Status.ACTIVE)){
+            throw new RuntimeException("WALLET INACTIVE OR FROZEN");
+        }
+        if(wallet.getUser().getPinLockedUntil().getTime() > System.currentTimeMillis())
+            return true;
+        return false;
+    }
 }

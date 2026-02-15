@@ -47,8 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 String jti = jwtUtil.extractJti(token);
                 if (redisTemplate.hasKey("blacklist:" + jti)) {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has been logged out");
-                    return;
+                    throw new RuntimeException("Token has been logged out");
                 }
 
                 Long userId = jwtUtil.extractUserId(token);
@@ -57,8 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if (user != null) {
                     if (!user.getStatus().equals(Status.ACTIVE)) {
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "User account is inactive");
-                        return;
+                        throw new RuntimeException( "User account is inactive");
                     }
 
                     UsernamePasswordAuthenticationToken auth =

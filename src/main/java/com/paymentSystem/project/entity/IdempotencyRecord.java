@@ -37,4 +37,10 @@ public class IdempotencyRecord {
     @UpdateTimestamp
     private Timestamp updatedAt ;
 
+
+    public IdempotencyRecord(String key, Payments payment, String response){
+        this.idempotencyKey = key;
+        this.payments = payment;
+        this.response = response;
+    }
 }
