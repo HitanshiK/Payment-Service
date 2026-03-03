@@ -7,6 +7,7 @@ public enum PaymentStatus {
     REFUNDED,
     ONGOING,
     AUTH_PENDING,
-    AUTH_FAILED
+    AUTH_FAILED,
+    GATEWAY_SUCCESS
     ;
 }

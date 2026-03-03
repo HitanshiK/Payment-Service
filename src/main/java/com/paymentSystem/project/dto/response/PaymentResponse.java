@@ -13,7 +13,7 @@ public class PaymentResponse {
     private long payerWalletId;
     private long payeeWalletId;
     private String status;
-    private String failureReason;
+    private String message;
 
     public PaymentResponse(Payments payment){
         this.id = payment.getId();

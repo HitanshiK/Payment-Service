@@ -2,6 +2,7 @@ package com.paymentSystem.project.entity;
 
 import com.paymentSystem.project.enums.Currency;
 import com.paymentSystem.project.enums.LedgerType;
+import com.paymentSystem.project.enums.Owner;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -34,7 +35,7 @@ public class Ledger {
     private Currency currency = Currency.INR;   //walletCurrency
 
     @Enumerated(EnumType.STRING)
-    private Currency originalCurrency = Currency.INR;   //sender's currency
+    private Currency originalCurrency ;   //sender's currency
 
     private Double amount = 0D;
 
@@ -44,6 +45,9 @@ public class Ledger {
     private Timestamp createdAt ;
 
     private Double fxRate = 1D;
+
+    @Enumerated(EnumType.STRING)
+    private Owner owner = Owner.USER;
 }
 
 

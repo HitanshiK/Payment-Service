@@ -20,6 +20,9 @@ import java.util.Optional;
 public class WalletService {
     /// a wallet can be frozen only by system triggers and @System role and will be reversed by system itself
 
+    /// system decided
+    private static final double MAX_WALLET_BALANCE = 1_00_000;
+
     @Autowired
     UserRepository userRepository;
     private final WalletRepository walletRepository;
@@ -100,5 +103,10 @@ public class WalletService {
         if(wallet.getUser().getPinLockedUntil().getTime() > System.currentTimeMillis())
             return true;
         return false;
+    }
+
+    public boolean checkWalletOverflow (Wallet wallet, Double amount){
+        double walletBalance = fetchWalletBalance(wallet.getId());
+        return (walletBalance + amount > MAX_WALLET_BALANCE);
     }
 }

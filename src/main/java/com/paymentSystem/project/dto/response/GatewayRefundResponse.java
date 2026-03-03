@@ -1,12 +1,17 @@
 package com.paymentSystem.project.dto.response;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
 public class GatewayRefundResponse {
 
+    private String gatewayPaymentId;
     private String refundId;
-    private String status;
     private Long refundedAmount;
+    private String status;
 
-    // getters/setters
 }
 
 
