@@ -13,6 +13,7 @@ public class GatewayWebhookData {
     private Long amount;
     private String currency;
     private String reason ;
+    private String gatewayRefundId;
 
 }
 

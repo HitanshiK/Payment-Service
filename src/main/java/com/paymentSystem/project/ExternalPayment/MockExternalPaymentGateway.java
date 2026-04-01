@@ -58,14 +58,15 @@ public class MockExternalPaymentGateway implements ExternalPaymentGateway {
             Long amount = Long.valueOf(data.get("amount").toString());
             String currency = (String) data.get("currency");
             String reason = (String) data.get("reason");
-
+            String refundId = (String)data.getOrDefault("gatewayRefundId",null);
             return new GatewayWebhookData(
                     orderId,
                     paymentId,
                     status,
                     amount,
                     currency,
-                    reason
+                    reason,
+                    refundId
             );
 
         } catch (Exception e) {
@@ -77,7 +78,7 @@ public class MockExternalPaymentGateway implements ExternalPaymentGateway {
      * Simulates refund processing.
      */
     @Override
-    public GatewayRefundResponse refund(String gatewayPaymentId, Long amount) {
+    public GatewayRefundResponse refund(String gatewayPaymentId, Double amount) {
 
         String refundId = "MOCK_REFUND_" + UUID.randomUUID();
 

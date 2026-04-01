@@ -41,6 +41,18 @@ public class PaymentController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/webhook/refund")
+    public ResponseEntity<Void> handleRefundWebhook (@RequestBody String payload,
+                                                     @RequestHeader(value = "X-Signature", required = false) String signature){
+        //verify signature
+        if(!gateway.verifySignature(payload,signature)){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+        GatewayWebhookData webhookData = gateway.parseWebhook(payload);
+        paymentService.completeRefund(webhookData);
+        return ResponseEntity.ok().build();
+    }
+
     //for same payment request idempotency key should be same
     @PostMapping("/post")
     public PaymentResponse createPaymentEntity(@RequestBody CreatePaymentRequest request, HttpServletRequest httpRequest){

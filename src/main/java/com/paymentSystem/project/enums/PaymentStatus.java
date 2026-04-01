@@ -8,6 +8,8 @@ public enum PaymentStatus {
     ONGOING,
     AUTH_PENDING,
     AUTH_FAILED,
-    GATEWAY_SUCCESS
+    GATEWAY_SUCCESS,
+    REFUND_INITIATED,
+    PARTIAL_SUCCESS
     ;
 }

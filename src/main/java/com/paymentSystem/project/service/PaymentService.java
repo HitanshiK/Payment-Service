@@ -194,20 +194,42 @@ public class PaymentService {
             if(totalBalance > MAX_WALLET_BALANCE){
                 excessAmount = totalBalance - MAX_WALLET_BALANCE;
                 allowedBalance = payments.getAmount() - excessAmount;
-                //excess amount to be refunded ;
+                payments.setStatus(PaymentStatus.PARTIAL_SUCCESS);
+                externalPaymentService.handleRefund(externalPayments,excessAmount);
             }else{
                 allowedBalance = payments.getAmount();
+                payments.setStatus(PaymentStatus.SUCCESS);
             }
 
             wallet.setBalance(allowedBalance);
-
             //create credit ledger ...if exceeded amount is greater than 0 then create ledger entry for System
             ledgersService.createCreditLedger(payments,allowedBalance,excessAmount, wallet);
-
-            payments.setStatus(PaymentStatus.SUCCESS);
 
         } else if (externalPayments.getStatus().equals(PaymentStatus.FAILED)) {
             payments.setStatus(PaymentStatus.FAILED);
         }
+    }
+
+    @Transactional
+    public void completeRefund (GatewayWebhookData data){
+            ExternalPayments externalPayments = externalPaymentService.parseRefundWebhookData(data);
+            Payments payments = externalPayments.getPayment();
+
+            if(externalPayments.getRefundStatus().equals(PaymentStatus.SUCCESS)){
+                return;
+            }
+
+            if(externalPayments.getRefundStatus().equals(PaymentStatus.GATEWAY_SUCCESS)){
+                if(payments.getAmount().equals(externalPayments.getRefundAmount())){
+//                    payments.setStatus(PaymentStatus.REFUNDED);
+//
+//                    ledgersService.createDebitLedger(payments,payments.get);
+                }else if(payments.getAmount() > externalPayments.getRefundAmount()){
+                    ledgersService.createSystemDebitLedger(payments,externalPayments.getRefundAmount());
+                }
+                externalPayments.setRefundStatus(PaymentStatus.SUCCESS);
+            } else if (externalPayments.getRefundStatus().equals(PaymentStatus.FAILED)) {
+                payments.setStatus(PaymentStatus.FAILED);
+            }
     }
 }

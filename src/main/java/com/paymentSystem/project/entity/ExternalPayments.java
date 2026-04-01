@@ -37,6 +37,14 @@ public class ExternalPayments {
 
     private String gatewayReferenceId ; // gateway unique id for money movement
 
+    private String gatewayRefundId;
+
+    private Double refundAmount;
+
+    private PaymentStatus refundStatus ;
+
+    private String refundReferenceId;
+
     @CreationTimestamp
     private String createdAt;
 

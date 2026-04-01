@@ -10,4 +10,6 @@ import org.springframework.stereotype.Repository;
 public interface ExternalPaymentsRepository extends JpaRepository<ExternalPayments, Long> {
 
     public ExternalPayments findByGatewayOrderId(String gatewayOrderId);
+
+    public ExternalPayments findByGatewayRefundId(String gatewayRefundId);
 }

@@ -26,6 +26,6 @@ public interface ExternalPaymentGateway {
     /**
      * Initiates refund for a successful payment.
      */
-    GatewayRefundResponse refund(String gatewayPaymentId, Long amount);
+    GatewayRefundResponse refund(String gatewayPaymentId, Double amount);
 }
 

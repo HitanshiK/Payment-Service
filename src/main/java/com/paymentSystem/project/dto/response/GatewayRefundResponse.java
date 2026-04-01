@@ -9,7 +9,7 @@ public class GatewayRefundResponse {
 
     private String gatewayPaymentId;
     private String refundId;
-    private Long refundedAmount;
+    private Double refundedAmount;
     private String status;
 
 }

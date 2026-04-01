@@ -43,4 +43,31 @@ public class LedgersService {
         }
 
     }
+
+    public void createDebitLedger (Payments payments, Wallet wallet){
+        Ledger ledger = new Ledger();
+        ledger.setPayments(payments);
+        ledger.setWallet(wallet);
+        ledger.setLedgerType(LedgerType.DEBIT);
+        ledger.setAmount(payments.getAmount());
+        ledger.setCurrency(payments.getCurrency());
+        ledger.setOwner(Owner.USER);
+        ledger.setOriginalCurrency(payments.getConvertedCurrency() != null
+                ? payments.getConvertedCurrency() : payments.getCurrency());
+        //fx rate not handled for external payment
+        repository.save(ledger);
+    }
+
+    public void createSystemDebitLedger (Payments payments,Double amount){
+        Ledger ledger = new Ledger();
+        ledger.setPayments(payments);
+        ledger.setLedgerType(LedgerType.DEBIT);
+        ledger.setAmount(amount);
+        ledger.setCurrency(payments.getCurrency());
+        ledger.setOwner(Owner.SYSTEM);
+        ledger.setOriginalCurrency(payments.getConvertedCurrency() != null
+                ? payments.getConvertedCurrency() : payments.getCurrency());
+        //fx rate not handled for external payment
+        repository.save(ledger);
+    }
 }

@@ -1,6 +1,8 @@
 package com.paymentSystem.project.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.paymentSystem.project.ExternalPayment.MockExternalPaymentGateway;
+import com.paymentSystem.project.dto.response.GatewayRefundResponse;
 import com.paymentSystem.project.dto.response.GatewayWebhookData;
 import com.paymentSystem.project.entity.ExternalPayments;
 import com.paymentSystem.project.entity.Payments;
@@ -18,6 +20,7 @@ public class ExternalPaymentService {
 
     private final ExternalPaymentsRepository repository;
     private final ObjectMapper mapper;
+    private final MockExternalPaymentGateway gateway;
 
     /**
 
@@ -62,6 +65,43 @@ public class ExternalPaymentService {
             } else {
                 payments.setGatewayReferenceId(data.getGatewayPaymentId());
                 payments.setStatus(PaymentStatus.FAILED);
+            }
+            String resposne = mapper.writeValueAsString(data);
+            payments.setResponse(resposne);
+            return payments;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    public void handleRefund ( ExternalPayments externalPayments, Double amount){
+        try{
+            GatewayRefundResponse refundResponse = gateway.refund(externalPayments.getGatewayReferenceId(), amount);
+
+            externalPayments.setGatewayRefundId(refundResponse.getRefundId());
+            externalPayments.setRefundAmount(amount);
+            externalPayments.setRefundStatus(PaymentStatus.REFUND_INITIATED);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    public ExternalPayments parseRefundWebhookData(GatewayWebhookData data){
+        try{
+            String refundId = data.getGatewayRefundId();
+
+            ExternalPayments payments = repository.findByGatewayRefundId(refundId);
+            if (payments == null) {
+                throw new RuntimeException("Payment record not found with order id " + refundId);
+            }
+
+            if (data.getStatus().equalsIgnoreCase("SUCCESS")) {
+                payments.setRefundReferenceId(data.getGatewayPaymentId());
+                payments.setRefundStatus(PaymentStatus.GATEWAY_SUCCESS);
+                payments.setGatewayCurrency(Currency.valueOf(data.getCurrency()));
+            } else {
+                payments.setRefundReferenceId(data.getGatewayPaymentId());
+                payments.setRefundStatus(PaymentStatus.FAILED);
             }
             String resposne = mapper.writeValueAsString(data);
             payments.setResponse(resposne);
