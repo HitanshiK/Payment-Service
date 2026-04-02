@@ -183,7 +183,10 @@ public class PaymentService {
             Wallet wallet = walletRepository.findByIdForUpdate(payments.getPayeeWalletId());
 
             if(!wallet.getStatus().equals(Status.ACTIVE)){
-                //refund amount
+                payments.setStatus(PaymentStatus.FAILED);
+                externalPayments.setStatus(PaymentStatus.FAILED);
+                externalPaymentService.handleRefund(externalPayments,externalPayments.getGatewayAmount());
+                return;
             }
 
             Double currentBalance = wallet.getBalance();
@@ -208,6 +211,7 @@ public class PaymentService {
         } else if (externalPayments.getStatus().equals(PaymentStatus.FAILED)) {
             payments.setStatus(PaymentStatus.FAILED);
         }
+        externalPayments.setStatus(PaymentStatus.SUCCESS);
     }
 
     @Transactional
