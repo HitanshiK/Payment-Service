@@ -1,6 +1,7 @@
 package com.paymentSystem.project.dto.request;
 
 import com.paymentSystem.project.enums.Currency;
+import com.paymentSystem.project.enums.PaymentType;
 import lombok.Data;
 
 @Data
@@ -13,4 +14,6 @@ public class CreatePaymentRequest {
     private Long payeeWalletId;
 
     private double amount;
+
+    private PaymentType type;
 }

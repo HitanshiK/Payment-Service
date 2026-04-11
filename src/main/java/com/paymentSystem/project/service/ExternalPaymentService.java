@@ -38,6 +38,7 @@ public class ExternalPaymentService {
             externalPayments.setGatewayAmount(payments.getAmount());
             externalPayments.setReferenceId(UUID.randomUUID().toString());
             externalPayments.setStatus(PaymentStatus.ONGOING);
+            externalPayments.setGatewayCurrency(payments.getCurrency());
             repository.save(externalPayments);
             return externalPayments;
         }else{

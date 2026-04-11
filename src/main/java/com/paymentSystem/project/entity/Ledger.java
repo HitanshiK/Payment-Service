@@ -35,7 +35,7 @@ public class Ledger {
     private Currency currency = Currency.INR;   //walletCurrency
 
     @Enumerated(EnumType.STRING)
-    private Currency originalCurrency ;   //sender's currency
+    private Double currencyAmount ;   //sender's currency
 
     private Double amount = 0D;
 
@@ -45,6 +45,8 @@ public class Ledger {
     private Timestamp createdAt ;
 
     private Double fxRate = 1D;
+
+    private Currency foreignCurrency;
 
     @Enumerated(EnumType.STRING)
     private Owner owner = Owner.USER;

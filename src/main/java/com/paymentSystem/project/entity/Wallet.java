@@ -38,6 +38,9 @@ public class Wallet {
 
     private boolean deleted = false;
 
+    @Version
+    private Long version;
+
     //helps to support multiple wallet against single user to handle multi currency
     //one of which will be default
     private boolean isDefault = false;

@@ -2,6 +2,7 @@ package com.paymentSystem.project.entity;
 
 import com.paymentSystem.project.enums.Currency;
 import com.paymentSystem.project.enums.PaymentStatus;
+import com.paymentSystem.project.enums.PaymentType;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,8 +31,7 @@ public class Payments {
     @Enumerated(EnumType.STRING)
     private Currency currency = Currency.INR;
 
-    @Enumerated(EnumType.STRING)
-    private Currency convertedCurrency ;
+    private Double currencyAmount ;
 
     private long payeeWalletId; // the one who receives
 
@@ -41,6 +41,11 @@ public class Payments {
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status = PaymentStatus.INITIATED;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentType type ;
+
+    private Double creditedAmount = 0d;
 
     private String failureReason ;
 

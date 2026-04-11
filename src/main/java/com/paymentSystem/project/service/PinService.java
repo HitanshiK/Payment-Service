@@ -45,7 +45,7 @@ public class PinService {
                 user.setPinAttempts(0);
             }else{
                 int attempts = user.getPinAttempts();
-                user.setPinAttempts(user.getPinAttempts() + 1);
+                user.setPinAttempts(attempts + 1);
             }
             return false;
         }

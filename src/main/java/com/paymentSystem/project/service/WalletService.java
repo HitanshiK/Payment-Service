@@ -2,13 +2,16 @@ package com.paymentSystem.project.service;
 
 import com.paymentSystem.project.dto.request.AddWalletRequest;
 import com.paymentSystem.project.dto.response.AddWalletResponse;
+import com.paymentSystem.project.entity.Payments;
 import com.paymentSystem.project.entity.User;
 import com.paymentSystem.project.entity.Wallet;
+import com.paymentSystem.project.enums.PaymentType;
 import com.paymentSystem.project.enums.Status;
 import com.paymentSystem.project.repos.UserRepository;
 import com.paymentSystem.project.repos.WalletRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +24,7 @@ public class WalletService {
     /// a wallet can be frozen only by system triggers and @System role and will be reversed by system itself
 
     /// system decided
-    private static final double MAX_WALLET_BALANCE = 1_00_000;
+    private static final double MAX_WALLET_BALANCE = 5_00_000d;
 
     @Autowired
     UserRepository userRepository;
@@ -105,8 +108,45 @@ public class WalletService {
         return false;
     }
 
+    public boolean validateWallets (Payments payments){
+        if(payments.getType().equals(PaymentType.PAYMENT)){
+            return isWalletLocked(payments.getPayerWalletId()) || isWalletLocked(payments.getPayeeWalletId());
+        } else if (payments.getType().equals(PaymentType.PAYOUT)){
+            return isWalletLocked(payments.getPayerWalletId());
+        }
+        return false;
+    }
+
     public boolean checkWalletOverflow (Wallet wallet, Double amount){
         double walletBalance = fetchWalletBalance(wallet.getId());
         return (walletBalance + amount > MAX_WALLET_BALANCE);
+    }
+
+    public boolean checkWalletUnderFlow (Wallet wallet, Double amount){
+        double walletBalance = fetchWalletBalance(wallet.getId());
+        return (walletBalance - amount < 0d);
+    }
+
+    @Transactional
+    public void debit(Wallet wallet, Double amount) {
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("Invalid debit amount");
+        }
+        Double currentBalance = wallet.getBalance();
+
+        if (currentBalance < amount) {
+            throw new RuntimeException("INSUFFICIENT BALANCE");
+        }
+
+        wallet.setBalance(currentBalance - amount);
+    }
+
+    @Transactional
+    public void credit(Wallet wallet, Double amount) {
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("Invalid debit amount");
+        }
+        Double currentBalance = wallet.getBalance();
+        wallet.setBalance(currentBalance + amount);
     }
 }

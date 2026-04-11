@@ -15,33 +15,28 @@ import org.springframework.stereotype.Service;
 public class LedgersService {
     private final LedgersRepository repository;
 
-    public void createCreditLedger (Payments payments, double allowedAmount, double excessAmount, Wallet wallet){
+    public void createCreditLedger (Payments payments, double allowedAmount, Wallet wallet){
         Ledger ledger = new Ledger();
         ledger.setPayments(payments);
         ledger.setWallet(wallet);
         ledger.setLedgerType(LedgerType.CREDIT);
         ledger.setAmount(allowedAmount);
-        ledger.setCurrency(payments.getCurrency());
+        ledger.setCurrency(wallet.getCurrency());
         ledger.setOwner(Owner.USER);
-        ledger.setOriginalCurrency(payments.getConvertedCurrency() != null
-                ? payments.getConvertedCurrency() : payments.getCurrency());
         //fx rate not handled for external payment
         repository.save(ledger);
+    }
 
-        if(excessAmount > 0){
-            Ledger ledger1 = new Ledger();
-            ledger1.setPayments(payments);
-            ledger1.setWallet(wallet);
-            ledger1.setLedgerType(LedgerType.CREDIT);
-            ledger1.setAmount(allowedAmount);
-            ledger1.setCurrency(payments.getCurrency());
-            ledger1.setOwner(Owner.SYSTEM);
-            ledger1.setOriginalCurrency(payments.getConvertedCurrency() != null
-                    ? payments.getConvertedCurrency() : payments.getCurrency());
+    public void createSystemCreditLedger (Payments payments, Double amount){
+        Ledger ledger1 = new Ledger();
+        ledger1.setPayments(payments);
+        ledger1.setLedgerType(LedgerType.CREDIT);
+        ledger1.setAmount(amount);
+        ledger1.setCurrency(payments.getCurrency());
+        ledger1.setOwner(Owner.SYSTEM);
+        ledger1.setForeignCurrency(payments.getCurrency());
 
-            repository.save(ledger1);
-        }
-
+        repository.save(ledger1);
     }
 
     public void createDebitLedger (Payments payments, Wallet wallet){
@@ -52,8 +47,7 @@ public class LedgersService {
         ledger.setAmount(payments.getAmount());
         ledger.setCurrency(payments.getCurrency());
         ledger.setOwner(Owner.USER);
-        ledger.setOriginalCurrency(payments.getConvertedCurrency() != null
-                ? payments.getConvertedCurrency() : payments.getCurrency());
+        ledger.setForeignCurrency(payments.getCurrency());
         //fx rate not handled for external payment
         repository.save(ledger);
     }
@@ -65,8 +59,7 @@ public class LedgersService {
         ledger.setAmount(amount);
         ledger.setCurrency(payments.getCurrency());
         ledger.setOwner(Owner.SYSTEM);
-        ledger.setOriginalCurrency(payments.getConvertedCurrency() != null
-                ? payments.getConvertedCurrency() : payments.getCurrency());
+        ledger.setForeignCurrency(payments.getCurrency());
         //fx rate not handled for external payment
         repository.save(ledger);
     }

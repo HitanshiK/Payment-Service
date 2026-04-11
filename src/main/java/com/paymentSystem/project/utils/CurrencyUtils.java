@@ -22,8 +22,6 @@ public class CurrencyUtils {
         if(currencyCheck(payments.getCurrency(), wallet)){
             return 1D;
         }else{
-            payments.setConvertedCurrency(wallet.getCurrency());
-
             ExchangeRate rate = exchangeRateRepo.
                     findByToCurrencyAndFromCurrency(
                             wallet.getCurrency().toString(),payments.getCurrency().toString());

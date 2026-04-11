@@ -33,7 +33,7 @@ public class ExternalPayments {
 
     private Double gatewayAmount;
 
-    private String gatewayOrderId ;  //gateway unique id for intent
+    private String gatewayId;  //gateway unique id for intent
 
     private String gatewayReferenceId ; // gateway unique id for money movement
 

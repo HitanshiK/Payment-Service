@@ -3,6 +3,7 @@ package com.paymentSystem.project.controllers;
 import com.paymentSystem.project.ExternalPayment.MockExternalPaymentGateway;
 import com.paymentSystem.project.dto.request.CreatePaymentRequest;
 import com.paymentSystem.project.dto.request.ExternalPaymentRequest;
+import com.paymentSystem.project.dto.request.VerifyPaymentRequest;
 import com.paymentSystem.project.dto.response.GatewayOrderResponse;
 import com.paymentSystem.project.dto.response.GatewayWebhookData;
 import com.paymentSystem.project.dto.response.PaymentResponse;
@@ -61,9 +62,9 @@ public class PaymentController {
     }
 
     @PostMapping("/verify")
-    public PaymentResponse verifyPayment (Long paymentId, HttpServletRequest httpServletRequest){
+    public PaymentResponse verifyPayment (@RequestBody VerifyPaymentRequest request, HttpServletRequest httpServletRequest){
         String key = httpServletRequest.getAttribute("IDEMPOTENCY_KEY").toString();
-       return paymentService.verifyPayment(paymentId,key);
+       return paymentService.verifyPayment(request,key);
     }
 
 }

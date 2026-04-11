@@ -2,7 +2,9 @@ package com.paymentSystem.project.ExternalPayment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paymentSystem.project.dto.request.GatewayOrderRequest;
+import com.paymentSystem.project.dto.request.GatewayPayoutRequest;
 import com.paymentSystem.project.dto.response.GatewayOrderResponse;
+import com.paymentSystem.project.dto.response.GatewayPayoutResponse;
 import com.paymentSystem.project.dto.response.GatewayRefundResponse;
 import com.paymentSystem.project.dto.response.GatewayWebhookData;
 import org.springframework.stereotype.Component;
@@ -28,6 +30,19 @@ public class MockExternalPaymentGateway implements ExternalPaymentGateway {
                 request.getAmount(),
                 request.getCurrency(),
                 "CREATED",""
+        );
+    }
+
+    @Override
+    public GatewayPayoutResponse createPayout(GatewayPayoutRequest request) {
+
+        String gatewayOrderId = "MOCK_PAYOUT_" + UUID.randomUUID();
+
+        return new GatewayPayoutResponse(
+                gatewayOrderId,
+                request.getReferenceId(),
+                "CREATED",request.getAmount(),
+                request.getCurrency()
         );
     }
 
