@@ -94,7 +94,7 @@ public class PaymentService {
                     message = "WALLET LOCKED";
                 }
             }
-
+            payments.setStatus(PaymentStatus.AUTH_PENDING);
             if(request.getAmount() <= 0){
                 message = "AMOUNT SHOULD BE GREATER THAN 0";
             }
@@ -140,7 +140,7 @@ public class PaymentService {
             String message = "";
             Wallet wallet = walletRepository.findById(request.getWalletId())
                     .orElseThrow(() -> new RuntimeException("Wallet not found"));
-            Double currencyAmount = currencyUtils.currencyAmount(payments, wallet);
+            Double currencyAmount = currencyUtils.currencyAmount(payments.getCurrency(), payments.getAmount(), wallet);
             payments.setCurrencyAmount(currencyAmount);
 
             if(currencyAmount > wallet.getPerTransLimit()){
@@ -197,7 +197,7 @@ public class PaymentService {
                 return handlePaymentFailure(payments, "Wallet is locked due to multiple incorrect pin attempts", key);
             }
 
-            Double currencyAmount = currencyUtils.currencyAmount(payments,userWallet);
+            Double currencyAmount = currencyUtils.currencyAmount(payments.getCurrency(), payments.getAmount(), userWallet);
             payments.setCurrencyAmount(currencyAmount);
 
             if(currencyAmount > userWallet.getPerTransLimit()){
@@ -219,7 +219,28 @@ public class PaymentService {
             }
 
             if(payments.getType().equals(PaymentType.PAYMENT)){
+                Wallet payeeWallet = walletRepository.findById(payments.getPayeeWalletId())
+                        .orElseThrow(() -> new RuntimeException("Receiver's wallet not found"));
 
+                Double currAmount = currencyUtils.currencyAmount(payments.getCurrency(), payments.getAmount(), payeeWallet);
+
+                if(walletService.checkWalletOverflow(payeeWallet,currAmount )){
+                    double excessAmount = currAmount - MAX_WALLET_BALANCE;
+                   currAmount = currAmount - excessAmount;
+
+                   reversePayment(payments, excessAmount, true);
+                   ledgersService.createSystemCreditLedger(payments,currAmount);
+                   payments.setStatus(PaymentStatus.PARTIAL_SUCCESS);
+                }
+                try {
+                    processWalletCredit(payments, currAmount,false);
+                } catch (OptimisticLockException e) {
+                    return handlePaymentFailure(payments, "CONCURRENT_MODIFICATION", key);
+                }
+                ledgersService.createCreditLedger(payments,currAmount,payeeWallet);
+                if(payments.getStatus().equals(PaymentStatus.AUTH_PENDING)){
+                    payments.setStatus(PaymentStatus.SUCCESS);
+                }
             }else if(payments.getType().equals(PaymentType.PAYOUT)){
                 ledgersService.createDebitLedger(payments,userWallet);
                 ExternalPayments externalPayments = externalPaymentService.createExternalPayment(payments);
@@ -292,11 +313,25 @@ public class PaymentService {
         } else if (externalPayments.getStatus().equals(PaymentStatus.FAILED)) {
             payments.setStatus(PaymentStatus.FAILED);
             if(payments.getType().equals(PaymentType.PAYOUT)){
-                Wallet wallet = walletRepository.findById(payments.getPayerWalletId()).orElseThrow();
-                ledgersService.createCreditLedger(payments,payments.getAmount(),wallet);
+                reversePayment(payments, payments.getAmount(), true);
             }
         }
         externalPayments.setStatus(PaymentStatus.SUCCESS);
+    }
+
+    @Transactional
+    public void reversePayment (Payments payments,Double amount,boolean skip){
+        try{
+            Wallet wallet = walletRepository.findById(payments.getPayerWalletId()).orElseThrow();
+            try {
+                Double currAmount = currencyUtils.currencyAmount(payments.getCurrency(), amount ,wallet);
+                processWalletCredit(payments, currAmount,skip);
+            } catch (OptimisticLockException e) {
+            }
+            ledgersService.createCreditLedger(payments,payments.getAmount(),wallet);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     //need to go through this ...
@@ -326,7 +361,7 @@ public class PaymentService {
 
     public PaymentResponse handlePaymentFailure (Payments payments, String remarks, String key){
        try {
-            payments.setStatus(PaymentStatus.AUTH_FAILED);
+            payments.setStatus(PaymentStatus.FAILED);
             payments.setFailureReason(remarks);
 
             PaymentResponse response = new PaymentResponse(payments);
@@ -393,7 +428,7 @@ public class PaymentService {
 
     @Transactional
     public void processWalletCredit(Payments payments, Double amount, boolean skipLimitCheck) {
-        Wallet wallet = walletRepository.findById(payments.getPayerWalletId())
+        Wallet wallet = walletRepository.findById(payments.getPayeeWalletId())
                 .orElseThrow();
 
         //  MUST re-check inside retry

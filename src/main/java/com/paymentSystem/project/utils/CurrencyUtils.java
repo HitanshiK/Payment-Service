@@ -18,15 +18,15 @@ public class CurrencyUtils {
         return currency.equals(wallet.getCurrency());
     }
 
-    public Double currencyAmount (Payments payments, Wallet wallet){
-        if(currencyCheck(payments.getCurrency(), wallet)){
+    public Double currencyAmount (Currency currency , Double amount, Wallet wallet){
+        if(currencyCheck(currency, wallet)){
             return 1D;
         }else{
             ExchangeRate rate = exchangeRateRepo.
                     findByToCurrencyAndFromCurrency(
-                            wallet.getCurrency().toString(),payments.getCurrency().toString());
+                            wallet.getCurrency().toString(),currency.toString());
 
-            return payments.getAmount() * rate.getFxRate();
+            return amount * rate.getFxRate();
         }
 
     }
