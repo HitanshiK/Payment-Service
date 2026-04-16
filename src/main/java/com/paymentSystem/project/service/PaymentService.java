@@ -5,14 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paymentSystem.project.ExternalPayment.MockExternalPaymentGateway;
 import com.paymentSystem.project.dto.request.*;
 import com.paymentSystem.project.dto.response.*;
-import com.paymentSystem.project.entity.ExternalPayments;
-import com.paymentSystem.project.entity.IdempotencyRecord;
-import com.paymentSystem.project.entity.Payments;
+import com.paymentSystem.project.entity.*;
 import com.paymentSystem.project.entity.Wallet;
 import com.paymentSystem.project.enums.PaymentStatus;
 import com.paymentSystem.project.enums.PaymentType;
 import com.paymentSystem.project.enums.Status;
 import com.paymentSystem.project.repos.IdempotencyRepository;
+import com.paymentSystem.project.repos.LedgersRepository;
 import com.paymentSystem.project.repos.PaymentsRepository;
 import com.paymentSystem.project.repos.WalletRepository;
 import com.paymentSystem.project.utils.CurrencyUtils;
@@ -23,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.PublicKey;
@@ -55,6 +55,7 @@ public class PaymentService {
     private final MockExternalPaymentGateway gateway;
     private final LedgersService ledgersService;
     private final PinService pinservice;
+    private final LedgersRepository ledgersRepository;
 
 
     @Transactional
@@ -169,6 +170,11 @@ public class PaymentService {
         }
     }
 
+    @Retryable(
+            value = OptimisticLockException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 50)
+    )
     @Transactional
     public PaymentResponse verifyPayment (VerifyPaymentRequest request, String key){
         try{
@@ -180,11 +186,7 @@ public class PaymentService {
 
             Payments payments = paymentsRepository.findById(request.getPaymentId()).orElseThrow(()-> new RuntimeException("Payment Intent not found"));
 
-            if(!(payments.getStatus() == PaymentStatus.AUTH_PENDING ||
-                    (payments.getStatus() == PaymentStatus.FAILED &&
-                            "INVALID_PIN".equals(payments.getFailureReason())))){
-                throw new RuntimeException("INVALID STATUS");
-            }
+            validatePaymentStatus(payments);
 
             Wallet userWallet = walletRepository.findById(payments.getPayerWalletId())
                     .orElseThrow(() -> new RuntimeException("User Wallet Not found"));
@@ -213,7 +215,7 @@ public class PaymentService {
             }
 
             try {
-                processWalletDebit(payments, currencyAmount);
+               walletService.debit(userWallet,currencyAmount);
             } catch (OptimisticLockException e) {
                 return handlePaymentFailure(payments, "CONCURRENT_MODIFICATION", key);
             }
@@ -229,20 +231,30 @@ public class PaymentService {
                    currAmount = currAmount - excessAmount;
 
                    reversePayment(payments, excessAmount, true);
-                   ledgersService.createSystemCreditLedger(payments,currAmount);
+                   Ledger ledger =ledgersService.createSystemCreditLedger(payments,currAmount);
+                   ledgersRepository.save(ledger);
+                   payments.setCreditedAmount(currAmount);
                    payments.setStatus(PaymentStatus.PARTIAL_SUCCESS);
                 }
                 try {
-                    processWalletCredit(payments, currAmount,false);
+                    walletService.credit(payeeWallet,currAmount);
                 } catch (OptimisticLockException e) {
                     return handlePaymentFailure(payments, "CONCURRENT_MODIFICATION", key);
                 }
-                ledgersService.createCreditLedger(payments,currAmount,payeeWallet);
+                Ledger ledger = ledgersService.createCreditLedger(payments,currAmount,payeeWallet);
+                ledgersRepository.save(ledger);
+                walletRepository.save(userWallet);
+                walletRepository.save(payeeWallet);
                 if(payments.getStatus().equals(PaymentStatus.AUTH_PENDING)){
                     payments.setStatus(PaymentStatus.SUCCESS);
                 }
+                paymentsRepository.save(payments);
             }else if(payments.getType().equals(PaymentType.PAYOUT)){
-                ledgersService.createDebitLedger(payments,userWallet);
+                Ledger ledger = ledgersService.createDebitLedger(payments,userWallet);
+                ledgersRepository.save(ledger);
+                walletRepository.save(userWallet);
+                paymentsRepository.save(payments);
+
                 ExternalPayments externalPayments = externalPaymentService.createExternalPayment(payments);
 
                 GatewayPayoutRequest payoutRequest = new GatewayPayoutRequest();
@@ -255,12 +267,27 @@ public class PaymentService {
                 externalPayments.setGatewayId(payoutResponse.getGatewayPayoutId());
             }
 
+            PaymentResponse response = new PaymentResponse(payments);
+            response.setStatus(payments.getStatus().toString());
+            response.setMessage(payments.getFailureReason());
+
+            idempotencyRepository.save(new IdempotencyRecord(key, payments, mapper.writeValueAsString(payments)));
+            idempotencyService.cacheResponse(key, new CachedResponse(200, mapper.writeValueAsString(payments)));
+            return response;
+
         } catch (RuntimeException e) {
             throw new RuntimeException(e.getMessage());
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-        return new PaymentResponse();
+    }
+
+    public void validatePaymentStatus (Payments payments){
+        if(!(payments.getStatus() == PaymentStatus.AUTH_PENDING ||
+                (payments.getStatus() == PaymentStatus.FAILED &&
+                        "INVALID_PIN".equals(payments.getFailureReason())))){
+            throw new RuntimeException("INVALID STATUS");
+        }
     }
 
     @Transactional
@@ -302,9 +329,11 @@ public class PaymentService {
 
                 wallet.setBalance(allowedBalance);
                 //create credit ledger ...if exceeded amount is greater than 0 then create ledger entry for System
-                ledgersService.createCreditLedger(payments, allowedBalance, wallet);
+                Ledger ledger =ledgersService.createCreditLedger(payments, allowedBalance, wallet);
+                ledgersRepository.save(ledger);
                 if(excessAmount > 0){
-                    ledgersService.createSystemCreditLedger(payments,excessAmount);
+                   Ledger ledger1 =  ledgersService.createSystemCreditLedger(payments,excessAmount);
+                   ledgersRepository.save(ledger1);
                 }
             } else if (payments.getType().equals(PaymentType.PAYOUT)) {
                 payments.setStatus(PaymentStatus.SUCCESS);
@@ -325,10 +354,11 @@ public class PaymentService {
             Wallet wallet = walletRepository.findById(payments.getPayerWalletId()).orElseThrow();
             try {
                 Double currAmount = currencyUtils.currencyAmount(payments.getCurrency(), amount ,wallet);
-                processWalletCredit(payments, currAmount,skip);
+                walletService.credit(wallet, currAmount);
             } catch (OptimisticLockException e) {
             }
-            ledgersService.createCreditLedger(payments,payments.getAmount(),wallet);
+           Ledger ledger =ledgersService.createCreditLedger(payments,payments.getAmount(),wallet);
+            ledgersRepository.save(ledger);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -351,7 +381,8 @@ public class PaymentService {
 //
 //                    ledgersService.createDebitLedger(payments,payments.get);
                 }else if(payments.getAmount() > externalPayments.getRefundAmount()){
-                    ledgersService.createSystemDebitLedger(payments,externalPayments.getRefundAmount());
+                   Ledger ledger = ledgersService.createSystemDebitLedger(payments,externalPayments.getRefundAmount());
+                   ledgersRepository.save(ledger);
                 }
                 externalPayments.setRefundStatus(PaymentStatus.SUCCESS);
             } else if (externalPayments.getRefundStatus().equals(PaymentStatus.FAILED)) {
@@ -405,38 +436,5 @@ public class PaymentService {
         }catch (Exception e){
             throw new RuntimeException(e.getCause());
         }
-    }
-
-    @Retryable(
-            value = OptimisticLockException.class,
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 50)
-    )
-    @Transactional
-    public void processWalletDebit(Payments payments, Double amount) {
-        Wallet wallet = walletRepository.findById(payments.getPayerWalletId())
-                .orElseThrow();
-
-        //  MUST re-check inside retry
-        if (walletService.checkWalletUnderFlow(wallet, amount)) {
-            throw new RuntimeException("INSUFFICIENT BALANCE");
-        }
-
-        walletService.debit(wallet, amount);
-        walletRepository.save(wallet); // version check happens here
-    }
-
-    @Transactional
-    public void processWalletCredit(Payments payments, Double amount, boolean skipLimitCheck) {
-        Wallet wallet = walletRepository.findById(payments.getPayeeWalletId())
-                .orElseThrow();
-
-        //  MUST re-check inside retry
-        if (!skipLimitCheck && walletService.checkWalletOverflow(wallet, amount)) {
-            throw new RuntimeException("INSUFFICIENT BALANCE");
-        }
-
-        walletService.debit(wallet, amount);
-        walletRepository.save(wallet); // version check happens here
     }
 }

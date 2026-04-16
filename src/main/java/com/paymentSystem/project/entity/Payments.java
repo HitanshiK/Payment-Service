@@ -26,8 +26,6 @@ public class Payments {
     @Column(name = "ref_id", unique = true, nullable = false)
     private String refId;          //unique txn id found in response
 
-    private Long originalPaymentId;   // in case of refunds
-
     @Enumerated(EnumType.STRING)
     private Currency currency = Currency.INR;
 
@@ -48,6 +46,9 @@ public class Payments {
     private Double creditedAmount = 0d;
 
     private String failureReason ;
+
+    @Version
+    private Long version;
 
     @CreationTimestamp
     private Timestamp createdAt ;

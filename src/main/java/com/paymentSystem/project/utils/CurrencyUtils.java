@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CurrencyUtils {
 
-    private final WalletRepository walletRepository;
     private final ExchangeRateRepository exchangeRateRepo;
 
     public Boolean currencyCheck (Currency currency, Wallet wallet){
