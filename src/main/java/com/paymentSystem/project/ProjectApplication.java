@@ -20,8 +20,6 @@ public class ProjectApplication {
 }
 
 //to do next ->
-//refund flow -> user initiated   -> refunds are generally system initiated
-
 //reset pin logic
 //create custom Lock repository
 // send rs 1 for first time payment                      user experience

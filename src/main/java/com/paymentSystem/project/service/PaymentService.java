@@ -311,30 +311,30 @@ public class PaymentService {
                     return;
                 }
 
-                Double currentBalance = wallet.getBalance();
-                Double totalBalance = currentBalance + payments.getAmount();
-                Double allowedBalance = 0d;
-                Double excessAmount = 0d;
+                Double currencyAmount = currencyUtils.currencyAmount(payments.getCurrency(), payments.getAmount(),wallet);
 
-                if (totalBalance > MAX_WALLET_BALANCE) {
-                    excessAmount = totalBalance - MAX_WALLET_BALANCE;
-                    allowedBalance = payments.getAmount() - excessAmount;
-                    payments.setStatus(PaymentStatus.PARTIAL_SUCCESS);
-                    payments.setCreditedAmount(allowedBalance);
+                if(walletService.checkWalletOverflow(wallet,currencyAmount)){
+                    double excessAmount = currencyAmount - MAX_WALLET_BALANCE;
+                    currencyAmount = currencyAmount - excessAmount;
+
                     externalPaymentService.handleRefund(externalPayments, excessAmount);
-                } else {
-                    allowedBalance = payments.getAmount();
+                    Ledger ledger =ledgersService.createSystemDebitLedger(payments,currencyAmount);
+                    ledgersRepository.save(ledger);
+                    payments.setCreditedAmount(currencyAmount);
+                    payments.setStatus(PaymentStatus.PARTIAL_SUCCESS);
+                }
+                try {
+                    walletService.credit(wallet,currencyAmount);
+                } catch (OptimisticLockException e) {
+                    throw  new RuntimeException("Try again");
+                }
+                Ledger ledger = ledgersService.createCreditLedger(payments,currencyAmount,wallet);
+                ledgersRepository.save(ledger);
+                walletRepository.save(wallet);
+                if(payments.getStatus().equals(PaymentStatus.AUTH_PENDING)){
                     payments.setStatus(PaymentStatus.SUCCESS);
                 }
-
-                wallet.setBalance(allowedBalance);
-                //create credit ledger ...if exceeded amount is greater than 0 then create ledger entry for System
-                Ledger ledger =ledgersService.createCreditLedger(payments, allowedBalance, wallet);
-                ledgersRepository.save(ledger);
-                if(excessAmount > 0){
-                   Ledger ledger1 =  ledgersService.createSystemCreditLedger(payments,excessAmount);
-                   ledgersRepository.save(ledger1);
-                }
+                paymentsRepository.save(payments);
             } else if (payments.getType().equals(PaymentType.PAYOUT)) {
                 payments.setStatus(PaymentStatus.SUCCESS);
             }
@@ -359,12 +359,12 @@ public class PaymentService {
             }
            Ledger ledger =ledgersService.createCreditLedger(payments,payments.getAmount(),wallet);
             ledgersRepository.save(ledger);
+            walletRepository.save(wallet);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    //need to go through this ...
 
     @Transactional
     public void completeRefund (GatewayWebhookData data){
@@ -375,19 +375,16 @@ public class PaymentService {
                 return;
             }
 
-            if(externalPayments.getRefundStatus().equals(PaymentStatus.GATEWAY_SUCCESS)){
-                if(payments.getAmount().equals(externalPayments.getRefundAmount())){
-//                    payments.setStatus(PaymentStatus.REFUNDED);
-//
-//                    ledgersService.createDebitLedger(payments,payments.get);
-                }else if(payments.getAmount() > externalPayments.getRefundAmount()){
-                   Ledger ledger = ledgersService.createSystemDebitLedger(payments,externalPayments.getRefundAmount());
-                   ledgersRepository.save(ledger);
-                }
-                externalPayments.setRefundStatus(PaymentStatus.SUCCESS);
-            } else if (externalPayments.getRefundStatus().equals(PaymentStatus.FAILED)) {
-                payments.setStatus(PaymentStatus.FAILED);
+        if (externalPayments.getRefundStatus().equals(PaymentStatus.GATEWAY_SUCCESS)) {
+            if (payments.getAmount().equals(externalPayments.getRefundAmount())) {
+                payments.setStatus(PaymentStatus.REFUNDED);
             }
+            Ledger ledger = ledgersService.createSystemDebitLedger(payments, externalPayments.getRefundAmount());
+            ledgersRepository.save(ledger);
+            externalPayments.setRefundStatus(PaymentStatus.SUCCESS);
+        } else if (externalPayments.getRefundStatus().equals(PaymentStatus.FAILED)) {
+            payments.setStatus(PaymentStatus.FAILED);
+        }
     }
 
     public PaymentResponse handlePaymentFailure (Payments payments, String remarks, String key){
