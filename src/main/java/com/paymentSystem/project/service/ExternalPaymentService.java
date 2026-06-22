@@ -50,7 +50,7 @@ public class ExternalPaymentService {
         try{
             String orderId = data.getGatewayOrderId();
 
-            ExternalPayments payments = repository.findByGatewayOrderId(orderId);
+            ExternalPayments payments = repository.findByGatewayId(orderId);
             if (payments == null) {
                 throw new RuntimeException("Payment record not found with order id " + orderId);
             }

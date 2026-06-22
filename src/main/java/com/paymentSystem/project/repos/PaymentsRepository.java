@@ -11,7 +11,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.List;
 
-@Component
 @Repository
 public interface PaymentsRepository extends JpaRepository<Payments, Long> {
 

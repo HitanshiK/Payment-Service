@@ -7,7 +7,9 @@ import com.paymentSystem.project.enums.Currency;
 import com.paymentSystem.project.repos.ExchangeRateRepository;
 import com.paymentSystem.project.repos.WalletRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
+@Component
 @RequiredArgsConstructor
 public class CurrencyUtils {
 
@@ -23,7 +25,7 @@ public class CurrencyUtils {
         }else{
             ExchangeRate rate = exchangeRateRepo.
                     findByToCurrencyAndFromCurrency(
-                            wallet.getCurrency().toString(),currency.toString());
+                            wallet.getCurrency(),currency);
 
             return amount * rate.getFxRate();
         }

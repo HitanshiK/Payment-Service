@@ -5,11 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 
-@Component
+
 @Repository
 public interface ExternalPaymentsRepository extends JpaRepository<ExternalPayments, Long> {
 
-    public ExternalPayments findByGatewayOrderId(String gatewayOrderId);
+    public ExternalPayments findByGatewayId(String gatewayId);
 
     public ExternalPayments findByGatewayRefundId(String gatewayRefundId);
 }

@@ -34,7 +34,6 @@ public class Ledger {
     @Enumerated(EnumType.STRING)
     private Currency currency = Currency.INR;   //walletCurrency
 
-    @Enumerated(EnumType.STRING)
     private Double currencyAmount ;   //sender's currency
 
     private Double amount = 0D;

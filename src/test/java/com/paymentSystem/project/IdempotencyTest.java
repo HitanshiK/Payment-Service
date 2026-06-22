@@ -1,0 +1,61 @@
+package com.paymentSystem.project;
+
+import com.paymentSystem.project.dto.request.VerifyPaymentRequest;
+import com.paymentSystem.project.dto.response.PaymentResponse;
+import com.paymentSystem.project.entity.Payments;
+import com.paymentSystem.project.entity.Wallet;
+import com.paymentSystem.project.enums.PaymentStatus;
+import com.paymentSystem.project.repos.WalletRepository;
+import com.paymentSystem.project.service.IdempotencyService;
+import com.paymentSystem.project.service.PaymentService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+@ActiveProfiles("test")  // ← Add this
+@SpringBootTest
+class IdempotencyTest {
+    
+    @Autowired
+    private PaymentService paymentService;
+    @Autowired
+    private IdempotencyService idempotencyService;
+    @Autowired
+    private WalletRepository walletRepository;
+    @Autowired
+    TestDataHelper helper;
+    
+    @Test
+    void testDuplicateRequestWithSameKeyIsIdempotent() {
+        // Arrange
+        Wallet payer = helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","123"), 5000.0);
+        Wallet payee = helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","234"), 0d);
+        Payments payment = helper.createAndSavePayment(
+            payer.getId(),
+            payee.getId(),
+            1000.0,
+            PaymentStatus.AUTH_PENDING
+        );
+        
+        String idempotencyKey = "request-12345";
+        VerifyPaymentRequest request = new VerifyPaymentRequest(payment.getId(), "pin");
+        
+        // Act - First request
+        PaymentResponse response1 = paymentService.verifyPayment(request, idempotencyKey);
+        double balanceAfterFirst = walletRepository.findById(payer.getId())
+            .orElseThrow().getBalance();
+        
+        // Act - Retry with same key
+        PaymentResponse response2 = paymentService.verifyPayment(request, idempotencyKey);
+        double balanceAfterSecond = walletRepository.findById(payer.getId())
+            .orElseThrow().getBalance();
+        
+        // Assert
+        assertEquals(response1.getId(), response2.getId());
+        assertEquals(balanceAfterFirst, balanceAfterSecond, 
+            "Balance should NOT change on retry - should be idempotent");
+        assertEquals(4000.0, balanceAfterFirst, "Should only be debited once");
+    }
+}

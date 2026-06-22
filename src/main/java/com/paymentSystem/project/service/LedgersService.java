@@ -31,7 +31,7 @@ public class LedgersService {
             ledger.setAmount(allowedAmount);
             ledger.setCurrency(payments.getCurrency());
         }else {
-            double fxRate = fxRateRepo.findByToCurrencyAndFromCurrency(payments.getCurrency().toString(),wallet.getCurrency().toString()).getFxRate();
+            double fxRate = fxRateRepo.findByToCurrencyAndFromCurrency(payments.getCurrency(),wallet.getCurrency()).getFxRate();
             BigDecimal amount = BigDecimal.valueOf(allowedAmount);
             amount =  amount.divide(BigDecimal.valueOf(fxRate), 2, RoundingMode.HALF_UP);
             ledger.setAmount(amount.doubleValue());
@@ -61,7 +61,7 @@ public class LedgersService {
         ledger.setWallet(wallet);
         ledger.setLedgerType(LedgerType.DEBIT);
         ledger.setOwner(Owner.USER);
-        double fxRate = fxRateRepo.findByToCurrencyAndFromCurrency(payments.getCurrency().toString(),wallet.getCurrency().toString()).getFxRate();
+        double fxRate = fxRateRepo.findByToCurrencyAndFromCurrency(payments.getCurrency(),wallet.getCurrency()).getFxRate();
         ledger.setAmount(payments.getAmount());
         ledger.setCurrency(wallet.getCurrency());
         ledger.setCurrencyAmount(payments.getCurrencyAmount());

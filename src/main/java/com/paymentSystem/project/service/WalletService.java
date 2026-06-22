@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 /**Future scope
  * Security compliance
@@ -70,7 +69,7 @@ public class WalletService {
             throw new RuntimeException("USER_INACTIVE");
         }
 
-        List<Wallet> wallets = walletRepository.findByUser_Id(userIdInLong);
+        List<Wallet> wallets = walletRepository.findByUserId(userIdInLong);
         com.paymentSystem.project.dto.response.Wallet response = new com.paymentSystem.project.dto.response.Wallet();
         com.paymentSystem.project.dto.response.Wallet.User userDetails = new com.paymentSystem.project.dto.response.Wallet.User();
         userDetails.setId(user.getId());
