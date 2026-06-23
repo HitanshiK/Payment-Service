@@ -29,6 +29,7 @@ public class IdempotencyRecord {
     @JoinColumn(name = "paymentId")
     Payments payments;
 
+    @Column(columnDefinition = "TEXT")
     private String response; //response to the api
 
     @CreationTimestamp

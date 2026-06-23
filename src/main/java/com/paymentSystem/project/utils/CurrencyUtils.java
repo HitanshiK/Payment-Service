@@ -21,7 +21,7 @@ public class CurrencyUtils {
 
     public Double currencyAmount (Currency currency , Double amount, Wallet wallet){
         if(currencyCheck(currency, wallet)){
-            return 1D;
+            return amount;
         }else{
             ExchangeRate rate = exchangeRateRepo.
                     findByToCurrencyAndFromCurrency(

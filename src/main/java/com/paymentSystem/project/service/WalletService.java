@@ -103,18 +103,18 @@ public class WalletService {
         if(!wallet.getStatus().equals(Status.ACTIVE)){
             throw new RuntimeException("WALLET INACTIVE OR FROZEN");
         }
-        if(wallet.getUser().getPinLockedUntil().getTime() > System.currentTimeMillis())
+        if(wallet.getUser().getPinLockedUntil() != null && wallet.getUser().getPinLockedUntil().getTime() > System.currentTimeMillis())
             return true;
         return false;
     }
 
     public boolean validateWallets (Payments payments){
         if(payments.getType().equals(PaymentType.PAYMENT)){
-            return isWalletLocked(payments.getPayerWalletId()) || isWalletLocked(payments.getPayeeWalletId());
+            return !(isWalletLocked(payments.getPayerWalletId()) || isWalletLocked(payments.getPayeeWalletId()));
         } else if (payments.getType().equals(PaymentType.PAYOUT)){
-            return isWalletLocked(payments.getPayerWalletId());
+            return !isWalletLocked(payments.getPayerWalletId());
         }
-        return false;
+        return true;
     }
 
     public boolean checkWalletOverflow (Wallet wallet, Double amount){

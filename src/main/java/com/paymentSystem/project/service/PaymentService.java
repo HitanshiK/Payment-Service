@@ -21,6 +21,7 @@ import org.aspectj.bridge.IMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.hibernate.StaleStateException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -277,6 +278,12 @@ public class PaymentService {
             idempotencyService.cacheResponse(key, new CachedResponse(200, mapper.writeValueAsString(payments)));
             return response;
 
+        } catch (ObjectOptimisticLockingFailureException | OptimisticLockException | StaleStateException e) {
+            // The version conflict surfaces here (mid-method auto-flush) as a raw JPA/Hibernate
+            // optimistic-lock exception, before Spring would translate it. Normalize it to the
+            // type @Retryable(retryFor = ObjectOptimisticLockingFailureException) expects so retry fires.
+            throw new ObjectOptimisticLockingFailureException(
+                    "Payment " + request.getPaymentId() + " was concurrently modified", e);
         } catch (RuntimeException e) {
             throw new RuntimeException(e.getMessage());
         } catch (JsonProcessingException e) {
@@ -424,32 +431,28 @@ public class PaymentService {
     }
 
     public boolean dailyTransactionLimitCheck ( Wallet wallet , Double amount ){
-        try{
-            LocalDateTime startOfDayLdt = LocalDate.now().atStartOfDay();
-            Timestamp startOfDay = Timestamp.valueOf(startOfDayLdt);
+        LocalDateTime startOfDayLdt = LocalDate.now().atStartOfDay();
+        Timestamp startOfDay = Timestamp.valueOf(startOfDayLdt);
 
-            Double totalAmount = 0d;
+        Double totalAmount = 0d;
 
-            List<Payments> payments = paymentsRepository.currentDayTransactions(wallet.getId(),startOfDay);
+        List<Payments> payments = paymentsRepository.currentDayTransactions(wallet.getId(),startOfDay);
 
-            if(!payments.isEmpty()){
-              payments =   payments.stream().filter( p -> p.getStatus().equals(PaymentStatus.SUCCESS) ||
-                       p.getStatus().equals(PaymentStatus.PARTIAL_SUCCESS) ||
-                      p.getStatus().equals(PaymentStatus.INITIATED) ||
-                      p.getStatus().equals(PaymentStatus.ONGOING)).toList();
+        if(!payments.isEmpty()){
+          payments =   payments.stream().filter( p -> p.getStatus().equals(PaymentStatus.SUCCESS) ||
+                   p.getStatus().equals(PaymentStatus.PARTIAL_SUCCESS) ||
+                  p.getStatus().equals(PaymentStatus.INITIATED) ||
+                  p.getStatus().equals(PaymentStatus.ONGOING)).toList();
 
-              for( Payments p : payments){
-                  if(p.getStatus().equals(PaymentStatus.PARTIAL_SUCCESS)){
-                      totalAmount += p.getCreditedAmount();
-                  }else {
-                      totalAmount += p.getAmount();
-                  }
+          for( Payments p : payments){
+              if(p.getStatus().equals(PaymentStatus.PARTIAL_SUCCESS)){
+                  totalAmount += p.getCreditedAmount();
+              }else {
+                  totalAmount += p.getAmount();
               }
-            }
-            if(totalAmount + amount > DAILY_TRANSACTION_LIMIT) return true;
-            return false;
-        }catch (Exception e){
-            throw new RuntimeException(e.getCause());
+          }
         }
+        if(totalAmount + amount > DAILY_TRANSACTION_LIMIT) return true;
+        return false;
     }
 }

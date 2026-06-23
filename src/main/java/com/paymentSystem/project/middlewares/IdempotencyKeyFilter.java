@@ -31,7 +31,6 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
             }
             request.setAttribute("IDEMPOTENCY_KEY", key);
         }
-
         filterChain.doFilter(request, response);
     }
 }
