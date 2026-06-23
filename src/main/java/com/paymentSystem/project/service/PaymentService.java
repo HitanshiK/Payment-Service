@@ -247,6 +247,8 @@ public class PaymentService {
                 walletService.credit(payeeWallet, currAmount);
 
                 Ledger ledger = ledgersService.createCreditLedger(payments, currAmount, payeeWallet);
+                Ledger debitLedger = ledgersService.createDebitLedger(payments,userWallet);
+                ledgersRepository.save(debitLedger);
                 ledgersRepository.save(ledger);
                 walletRepository.save(userWallet);
                 walletRepository.save(payeeWallet);

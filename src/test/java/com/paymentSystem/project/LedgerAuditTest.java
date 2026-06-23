@@ -1,6 +1,7 @@
 package com.paymentSystem.project;
 
 import com.paymentSystem.project.dto.request.VerifyPaymentRequest;
+import com.paymentSystem.project.dto.response.PaymentResponse;
 import com.paymentSystem.project.entity.Ledger;
 
 import java.util.List;
@@ -22,7 +23,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyString;
 
@@ -48,17 +49,23 @@ class LedgerAuditTest {
 
     @Test
     void testEveryPaymentCreatesLedgerEntries() {
-        Wallet payer = helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","123"), 5000.0);
-        Wallet payee = helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","234"), 0d);
+        Wallet payer = helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","1234"), 5000.0);
+        Wallet payee = helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","2345"), 0d);
         Payments payment = helper.createAndSavePayment(
                 payer.getId(),
                 payee.getId(),
                 1000.0,
                 PaymentStatus.AUTH_PENDING
         );
-        
+
+        // Actually process the payment so the debit + credit ledgers get written.
+        paymentService.verifyPayment(
+                new VerifyPaymentRequest(payment.getId(), "1234"),
+                "ledger-audit-key"
+        );
+
         List<Ledger> ledgers = ledgersRepository.findByPaymentId(payment.getId());
-        
+
         // Should have debit AND credit
         assertEquals(2, ledgers.size());
         assertEquals(LedgerType.DEBIT, ledgers.get(0).getLedgerType());
@@ -70,10 +77,11 @@ class LedgerAuditTest {
     }
     
     @Test
-    void testFailedPaymentAlsoCreatesLedger() {
-        // Even failed payments should have ledger entries for audit
-        Wallet payer= helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","123"), 100.0);
-        Wallet payee = helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","234"), 0d);
+    void testFailedPaymentDoesNotCreateLedger() {
+        // A failed payment moves no money, so it writes NO ledger entry.
+        // The failure is recorded at the payment level (status + failure reason), not in the ledger.
+        Wallet payer= helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","1234"), 100.0);
+        Wallet payee = helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","2345"), 0d);
 
         Payments payment = helper.createAndSavePayment(
                 payer.getId(),
@@ -81,13 +89,18 @@ class LedgerAuditTest {
                 1000.0,
                 PaymentStatus.AUTH_PENDING
         );
-        paymentService.verifyPayment(
-            new VerifyPaymentRequest(payment.getId(), "wrong_pin"),
+
+        // Wrong PIN -> payment fails before any money movement.
+        PaymentResponse response = paymentService.verifyPayment(
+            new VerifyPaymentRequest(payment.getId(), "1235"),
             "key1"
         );
-        
+
+        // Failure is captured on the payment itself...
+        assertEquals(PaymentStatus.FAILED.toString(), response.getStatus());
+
+        // ...and no ledger entries are written.
         List<Ledger> ledgers = ledgersRepository.findByPaymentId(payment.getId());
-        
-        assertFalse(ledgers.isEmpty(), "Failed payment should still have ledger entry");
+        assertTrue(ledgers.isEmpty(), "Failed payment should not create ledger entries");
     }
 }
