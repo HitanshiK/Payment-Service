@@ -53,8 +53,8 @@ class PaymentIntegrationTest {
     @Test
     void testSuccessfulPaymentUpdatesAllEntities() {
         // Arrange - Create test data
-        User payer = helper.createAndSaveUser("payer@test.com","123");
-        User payee = helper.createAndSaveUser("payee@test.com","234");
+        User payer = helper.createAndSaveUser("payer@test.com","1234");
+        User payee = helper.createAndSaveUser("payee@test.com","2345");
         
         Wallet payerWallet = helper.createAndSaveWallet(payer, 5000.0);
         Wallet payeeWallet = helper.createAndSaveWallet(payee, 1000.0);
@@ -68,12 +68,12 @@ class PaymentIntegrationTest {
         
         // Act
         VerifyPaymentRequest request = new VerifyPaymentRequest(
-            payment.getId(), "correct_pin"
+            payment.getId(), "1234"
         );
         PaymentResponse response = paymentService.verifyPayment(request, "key123");
         
-        // Assert
-        assertEquals(PaymentStatus.SUCCESS, response.getStatus());
+        // Assert (response.getStatus() returns a String)
+        assertEquals(PaymentStatus.SUCCESS.toString(), response.getStatus());
         
         // Verify wallet balances
         Wallet updatedPayerWallet = walletRepository.findById(payerWallet.getId()).orElseThrow();
@@ -94,10 +94,10 @@ class PaymentIntegrationTest {
     @Test
     void testFailureRollsBackAllChanges() {
         // Arrange
-        Wallet wallet = helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","123"), 100.0);
+        Wallet wallet = helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","1234"), 100.0);
         Payments payment = helper.createAndSavePayment(
             wallet.getId(),
-            helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","234"), 0d).getId(),
+            helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","2345"), 0d).getId(),
             1000.0,  // More than available
             PaymentStatus.AUTH_PENDING
         );
@@ -105,7 +105,7 @@ class PaymentIntegrationTest {
         // Act
         try {
             paymentService.verifyPayment(
-                new VerifyPaymentRequest(payment.getId(), "correct_pin"),
+                new VerifyPaymentRequest(payment.getId(), "1234"),
                 "key123"
             );
         } catch (RuntimeException e) {
