@@ -2,9 +2,15 @@ package com.paymentSystem.project.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paymentSystem.project.dto.response.CachedResponse;
+import com.paymentSystem.project.entity.IdempotencyRecord;
+import com.paymentSystem.project.entity.Payments;
+import com.paymentSystem.project.repos.IdempotencyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -16,6 +22,8 @@ public class IdempotencyService {
     RedisTemplate<String, String> redisTemplate ;
     @Autowired
     ObjectMapper objectMapper;
+    @Autowired
+    IdempotencyRepository idempotencyRepository;
 
     private static final String PREFIX = "idem:payments:";
 
@@ -45,6 +53,29 @@ public class IdempotencyService {
             );
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize cached response");
+        }
+    }
+
+    @Transactional(
+            propagation = Propagation.REQUIRES_NEW,
+            noRollbackFor = DataIntegrityViolationException.class
+    )
+    public void saveIdempotencyRecordSafely(String key, Payments payments) {
+        try {
+            // Create idempotency record
+            IdempotencyRecord record = new IdempotencyRecord();
+            record.setIdempotencyKey(key);
+            record.setPayments(payments);
+            record.setStatus(payments.getStatus());
+            record.setResponse(objectMapper.writeValueAsString(payments));
+
+            // Try to save to database
+            idempotencyRepository.save(record);
+
+        } catch (DataIntegrityViolationException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save idempotency record", e);
         }
     }
 }

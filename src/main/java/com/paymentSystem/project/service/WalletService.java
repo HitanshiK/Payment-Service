@@ -56,6 +56,7 @@ public class WalletService {
             response.setCreatedAt(wallet.getCreatedAt());
             return response;
         }catch (Exception e){
+            e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
     }

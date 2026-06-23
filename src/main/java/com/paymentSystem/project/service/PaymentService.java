@@ -19,6 +19,8 @@ import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.bridge.IMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -171,9 +173,13 @@ public class PaymentService {
     }
 
     @Retryable(
-            value = OptimisticLockException.class,
             maxAttempts = 3,
-            backoff = @Backoff(delay = 50)
+            backoff = @Backoff(
+                    delay = 50,
+                    multiplier = 2.0,
+                    maxDelay = 500
+            ),
+            retryFor = ObjectOptimisticLockingFailureException.class
     )
     @Transactional
     public PaymentResponse verifyPayment (VerifyPaymentRequest request, String key){
@@ -210,17 +216,15 @@ public class PaymentService {
                 return handlePaymentFailure(payments, "Daily Transaction Limit reached", key);
             }
 
-            if (walletService.checkWalletUnderFlow(userWallet, currencyAmount)){
+            if (walletService.checkWalletUnderFlow(userWallet, currencyAmount)) {
                 return handlePaymentFailure(payments, "INSUFFICIENT BALANCE", key);
             }
 
-            try {
-               walletService.debit(userWallet,currencyAmount);
-            } catch (OptimisticLockException e) {
-                return handlePaymentFailure(payments, "CONCURRENT_MODIFICATION", key);
-            }
 
-            if(payments.getType().equals(PaymentType.PAYMENT)){
+            walletService.debit(userWallet, currencyAmount);
+
+
+            if (payments.getType().equals(PaymentType.PAYMENT)) {
                 Wallet payeeWallet = walletRepository.findById(payments.getPayeeWalletId())
                         .orElseThrow(() -> new RuntimeException("Receiver's wallet not found"));
 
@@ -228,20 +232,18 @@ public class PaymentService {
 
                 if(walletService.checkWalletOverflow(payeeWallet,currAmount )){
                     double excessAmount = currAmount - MAX_WALLET_BALANCE;
-                   currAmount = currAmount - excessAmount;
+                    currAmount = currAmount - excessAmount;
 
-                   reversePayment(payments, excessAmount, true);
-                   Ledger ledger =ledgersService.createSystemCreditLedger(payments,currAmount);
-                   ledgersRepository.save(ledger);
-                   payments.setCreditedAmount(currAmount);
-                   payments.setStatus(PaymentStatus.PARTIAL_SUCCESS);
+                    reversePayment(payments, excessAmount, true);
+                    Ledger ledger = ledgersService.createSystemCreditLedger(payments, currAmount);
+                    ledgersRepository.save(ledger);
+                    payments.setCreditedAmount(currAmount);
+                    payments.setStatus(PaymentStatus.PARTIAL_SUCCESS);
                 }
-                try {
-                    walletService.credit(payeeWallet,currAmount);
-                } catch (OptimisticLockException e) {
-                    return handlePaymentFailure(payments, "CONCURRENT_MODIFICATION", key);
-                }
-                Ledger ledger = ledgersService.createCreditLedger(payments,currAmount,payeeWallet);
+
+                walletService.credit(payeeWallet, currAmount);
+
+                Ledger ledger = ledgersService.createCreditLedger(payments, currAmount, payeeWallet);
                 ledgersRepository.save(ledger);
                 walletRepository.save(userWallet);
                 walletRepository.save(payeeWallet);
@@ -387,22 +389,38 @@ public class PaymentService {
         }
     }
 
-    public PaymentResponse handlePaymentFailure (Payments payments, String remarks, String key){
-       try {
-            payments.setStatus(PaymentStatus.FAILED);
-            payments.setFailureReason(remarks);
+    public PaymentResponse handlePaymentFailure(Payments payments, String remarks, String key) {
+        payments.setStatus(PaymentStatus.FAILED);
+        payments.setFailureReason(remarks);
 
-            PaymentResponse response = new PaymentResponse(payments);
-            response.setStatus(payments.getStatus().toString());
-            response.setMessage(payments.getFailureReason());
+        PaymentResponse response = new PaymentResponse(payments);
+        response.setStatus(payments.getStatus().toString());
+        response.setMessage(payments.getFailureReason());
 
-            idempotencyRepository.save(new IdempotencyRecord(key, payments, mapper.writeValueAsString(payments)));
-            idempotencyService.cacheResponse(key, new CachedResponse(200, mapper.writeValueAsString(payments)));
+        try {
+            idempotencyService.saveIdempotencyRecordSafely(key, payments);
 
-            return response;
-        }catch (Exception e){
-           throw new RuntimeException (e.getCause());
-       }
+            idempotencyService.cacheResponse(
+                    key,
+                    new CachedResponse(200, mapper.writeValueAsString(payments))
+            );
+
+            System.out.println("✅ Idempotency record saved for payment: " + payments.getId());
+
+        } catch (DataIntegrityViolationException | JsonProcessingException e) {
+            // Keep this - it's expected
+            System.out.println("⚠️ Idempotency record already exists for payment: " + payments.getId() +
+                    ". Another thread already processed this request.");
+
+            Optional<CachedResponse> cached = idempotencyService.getCachedResponse(key);
+            if (cached.isPresent()) {
+                System.out.println("📌 Returning cached response for idempotency key: " + key);
+            }
+        }
+        // ✅ DELETE: catch (ObjectOptimisticLockingFailureException e) block
+        // Let the exception bubble up to @Retryable
+
+        return response;
     }
 
     public boolean dailyTransactionLimitCheck ( Wallet wallet , Double amount ){
