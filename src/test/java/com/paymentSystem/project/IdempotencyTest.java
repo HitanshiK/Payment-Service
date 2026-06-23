@@ -55,8 +55,8 @@ class IdempotencyTest {
     @Test
     void testDuplicateRequestWithSameKeyIsIdempotent() {
         // Arrange
-        Wallet payer = helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","123"), 5000.0);
-        Wallet payee = helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","234"), 0d);
+        Wallet payer = helper.createAndSaveWallet(helper.createAndSaveUser("user1@test.com","1234"), 5000.0);
+        Wallet payee = helper.createAndSaveWallet(helper.createAndSaveUser("user2@test.com","2345"), 0d);
         Payments payment = helper.createAndSavePayment(
             payer.getId(),
             payee.getId(),
@@ -65,7 +65,9 @@ class IdempotencyTest {
         );
         
         String idempotencyKey = "request-12345";
-        VerifyPaymentRequest request = new VerifyPaymentRequest(payment.getId(), "pin");
+        // PIN must match the payer's stored hash (user created with "123"), otherwise the
+        // first call fails at the PIN check and never debits — making the replay assertion moot.
+        VerifyPaymentRequest request = new VerifyPaymentRequest(payment.getId(), "1234");
         
         // Act - First request
         PaymentResponse response1 = paymentService.verifyPayment(request, idempotencyKey);
