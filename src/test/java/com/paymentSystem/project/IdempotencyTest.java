@@ -1,6 +1,7 @@
 package com.paymentSystem.project;
 
 import com.paymentSystem.project.dto.request.VerifyPaymentRequest;
+import com.paymentSystem.project.dto.response.CachedResponse;
 import com.paymentSystem.project.dto.response.PaymentResponse;
 import com.paymentSystem.project.entity.Payments;
 import com.paymentSystem.project.entity.Wallet;
@@ -11,22 +12,46 @@ import com.paymentSystem.project.service.PaymentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 @ActiveProfiles("test")  // ← Add this
 @SpringBootTest
 class IdempotencyTest {
     
     @Autowired
     private PaymentService paymentService;
-    @Autowired
+    @MockBean
     private IdempotencyService idempotencyService;
     @Autowired
     private WalletRepository walletRepository;
     @Autowired
     TestDataHelper helper;
-    
+
+    // In-memory stand-in for the Redis cache so we can verify real idempotent replay
+    // without a live Redis: a miss on first call, a hit on retry with the same key.
+    private final Map<String, CachedResponse> cacheStore = new HashMap<>();
+
+    @BeforeEach
+    void stubIdempotencyCache() {
+        cacheStore.clear();
+        when(idempotencyService.getCachedResponse(anyString()))
+                .thenAnswer(inv -> Optional.ofNullable(cacheStore.get(inv.<String>getArgument(0))));
+        doAnswer(inv -> {
+            cacheStore.put(inv.getArgument(0), inv.getArgument(1));
+            return null;
+        }).when(idempotencyService).cacheResponse(anyString(), any(CachedResponse.class));
+    }
+
     @Test
     void testDuplicateRequestWithSameKeyIsIdempotent() {
         // Arrange

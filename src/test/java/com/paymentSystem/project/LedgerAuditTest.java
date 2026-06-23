@@ -11,14 +11,20 @@ import com.paymentSystem.project.enums.PaymentStatus;
 import com.paymentSystem.project.repos.LedgersRepository;
 import com.paymentSystem.project.service.PaymentService;
 import com.paymentSystem.project.service.WalletService;
+import com.paymentSystem.project.service.IdempotencyService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import com.paymentSystem.project.entity.Payments;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 
 @SpringBootTest
 @ActiveProfiles("test")  // ← Add this
@@ -32,6 +38,13 @@ class LedgerAuditTest {
     WalletService walletService;
     @Autowired
     LedgersRepository ledgersRepository;
+    @MockBean
+    IdempotencyService idempotencyService;
+
+    @BeforeEach
+    void stubIdempotencyCache() {
+        when(idempotencyService.getCachedResponse(anyString())).thenReturn(Optional.empty());
+    }
 
     @Test
     void testEveryPaymentCreatesLedgerEntries() {

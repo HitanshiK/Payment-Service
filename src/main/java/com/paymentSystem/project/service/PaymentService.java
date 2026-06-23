@@ -232,7 +232,9 @@ public class PaymentService {
                 Double currAmount = currencyUtils.currencyAmount(payments.getCurrency(), payments.getAmount(), payeeWallet);
 
                 if(walletService.checkWalletOverflow(payeeWallet,currAmount )){
-                    double excessAmount = currAmount - MAX_WALLET_BALANCE;
+                    // Excess is how much the credit would push the payee PAST the cap,
+                    // measured from its CURRENT balance (not amount - cap).
+                    double excessAmount = (payeeWallet.getBalance() + currAmount) - MAX_WALLET_BALANCE;
                     currAmount = currAmount - excessAmount;
 
                     reversePayment(payments, excessAmount, true);
@@ -323,7 +325,7 @@ public class PaymentService {
                 Double currencyAmount = currencyUtils.currencyAmount(payments.getCurrency(), payments.getAmount(),wallet);
 
                 if(walletService.checkWalletOverflow(wallet,currencyAmount)){
-                    double excessAmount = currencyAmount - MAX_WALLET_BALANCE;
+                    double excessAmount = (wallet.getBalance() + currencyAmount) - MAX_WALLET_BALANCE;
                     currencyAmount = currencyAmount - excessAmount;
 
                     externalPaymentService.handleRefund(externalPayments, excessAmount);
