@@ -1,5 +1,7 @@
 # Payment Service & Ledger
 
+[![CI](https://github.com/HitanshiK/Payment-Service/actions/workflows/ci.yml/badge.svg)](https://github.com/HitanshiK/Payment-Service/actions/workflows/ci.yml)
+
 A Spring Boot wallet-payment backend with a double-entry ledger. It handles
 internal wallet-to-wallet payments, external top-ups and payouts through a
 payment gateway, PIN-protected authorization, and a full audit trail of money
