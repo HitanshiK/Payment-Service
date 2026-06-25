@@ -3,9 +3,11 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3307/paymentdb
-    username: root
-    password: root
+    # Defaults target the host (local bootRun). In Docker, these are overridden via
+    # environment so the app reaches MySQL by its compose service name on 3306.
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/paymentdb}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -19,8 +21,8 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
   jackson:
     serialization:
